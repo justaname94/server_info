@@ -13,3 +13,9 @@
 
 # CockroachDB data
 data/
+
+# Main executable file
+main
+
+# VSCode local workspace configuration
+.vscode/
