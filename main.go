@@ -1,10 +1,12 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 
-	"./servers"
+	"./api"
+	"./api/controllers"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -22,10 +24,16 @@ func Routes() *chi.Mux {
 	)
 
 	router.Route("/", func(r chi.Router) {
-		r.Mount("/servers", servers.Routes())
+		r.Mount("/servers", controllers.Routes())
 	})
 
 	return router
+}
+
+var db *sql.DB
+
+func GetDb() *sql.DB {
+	return db
 }
 
 func main() {
@@ -39,6 +47,8 @@ func main() {
 	if err := chi.Walk(router, walkFunc); err != nil {
 		log.Panicf("Logging err: %s\n", err.Error())
 	}
+
+	db = api.InitDb()
 
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
