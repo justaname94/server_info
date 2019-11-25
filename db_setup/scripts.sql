@@ -10,18 +10,23 @@ IF NOT EXISTS website.site
 (
   domain STRING PRIMARY KEY,
   title STRING,
-  created_at TIMESTAMP,
   ssl_grade STRING,
   previous_ssl_grade STRING,
   logo STRING,
-  is_down Bool
+  is_down Bool,
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP
 );
 
 CREATE TABLE
 IF NOT EXISTS website.server
 (
+  id SERIAL PRIMARY KEY,
   address STRING,
   ssl_grade STRING,
   country STRING,
-  owner STRING
+  owner STRING,
+  site string  NOT NULL REFERENCES website.site(domain),
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP
 )

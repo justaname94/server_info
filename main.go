@@ -1,12 +1,12 @@
 package main
 
 import (
-	"database/sql"
 	"log"
 	"net/http"
 
-	"./api"
 	"./api/controllers"
+	"./api/database"
+	"./api/models"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -30,12 +30,6 @@ func Routes() *chi.Mux {
 	return router
 }
 
-var db *sql.DB
-
-func GetDb() *sql.DB {
-	return db
-}
-
 func main() {
 	router := Routes()
 
@@ -48,7 +42,12 @@ func main() {
 		log.Panicf("Logging err: %s\n", err.Error())
 	}
 
-	db = api.InitDb()
+	db := database.InitDb()
 
+	// Inject db into db models file
+	// TODO: Find better approach to have a global single db connection
+	models.Db = db
+
+	defer db.Close()
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
