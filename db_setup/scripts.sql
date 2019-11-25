@@ -1,0 +1,5 @@
+CREATE USER
+IF NOT EXISTS go_admin;
+CREATE DATABASE website;
+
+GRANT ALL ON DATABASE website TO go_admin;

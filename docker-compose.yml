@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+  roachdb:
+    image: cockroachdb/cockroach:v19.2.0
+    hostname: roach1
+    entrypoint: "/bin/bash"
+    command: /db_setup/setup_db.sh
+    ports:
+      - "26257:26257"
+      - "8080:8080"
+    networks:
+      - roachnet
+    volumes:
+      - ./db_setup:/db_setup
+      - ./data/db-1:/cockroach/cockroach-data
+networks:
+  roachnet:
