@@ -17,14 +17,17 @@ type Site struct {
 	PreviousSSLGrade string    `json:"previousSSLGrade"`
 	Logo             string    `json:"logo"`
 	IsDown           bool      `json:"isDown"`
+	ServersChanged   bool      `json:"serversChanged"`
 }
 
 type Server struct {
-	Address   string    `json:"address"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updateddAt"`
-	SSLGrade  string    `json:"sslGrade"`
-	Country   string    `json:"country"`
+	Address      string    `json:"address"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updateddAt"`
+	SSLGrade     string    `json:"sslGrade"`
+	Country      string    `json:"country"`
+	Owner        string    `json:"owner"`
+	Organization string    `json:"organization"`
 }
 
 func FetchSite(domain string) (Site, error) {
