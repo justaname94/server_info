@@ -2,10 +2,13 @@ package controllers
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 
 	"../models"
+	"../utils"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
 )
@@ -20,9 +23,11 @@ func GetSite(w http.ResponseWriter, r *http.Request) {
 	domain := chi.URLParam(r, "domain")
 	site, err := models.FetchSite(domain)
 
-	if err != nil && err == sql.ErrNoRows {
-		log.Fatal(err)
-	} else {
+	if err == sql.ErrNoRows {
+		servers, _ := utils.APIInfo(domain)
+		fmt.Println(servers)
+
+	} else if err != nil {
 		log.Fatal(err)
 	}
 	render.JSON(w, r, site)

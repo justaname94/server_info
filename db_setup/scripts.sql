@@ -14,6 +14,7 @@ IF NOT EXISTS website.site
   previous_ssl_grade STRING,
   logo STRING,
   is_down Bool,
+  servers_changed bool,
   created_at TIMESTAMP,
   updated_at TIMESTAMP
 );
