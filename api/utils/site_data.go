@@ -29,16 +29,20 @@ type ServersInfo struct {
 }
 
 func GetWebsiteData(domain string) models.Site {
+	site := models.Site{}
+	body, err := GetPageBody(domain)
+	if err != nil {
+		site.IsDown = true
+		return site
+	}
 	servers, _ := aPIInfo(domain)
 	whois := whoIsInfo(domain)
-	title, _ := titleMetaInfo(domain)
-	logo, logoErr := logoMetaInfo(domain)
+	title, _ := titleMetaInfo(body)
+	logo, logoErr := logoMetaInfo(body, domain)
 	var lowestGrade string
 
-	site := models.Site{
-		Title:  title,
-		Domain: domain,
-	}
+	site.Title = title
+	site.Domain = domain
 
 	for i, v := range servers.Endpoints {
 		server := models.Server{
@@ -47,6 +51,7 @@ func GetWebsiteData(domain string) models.Site {
 			Country: whois["country"],
 			Owner:   whois["owner"],
 		}
+
 		site.Servers = append(site.Servers, server)
 		if i > 1 {
 			if isGradeGreater(lowestGrade, v.Grade) {
@@ -58,7 +63,7 @@ func GetWebsiteData(domain string) models.Site {
 	}
 	site.Grade = lowestGrade
 	if logoErr != nil {
-		site.Logo = "no logo available"
+		site.Logo = ""
 	}
 	site.Logo = logo
 
@@ -109,10 +114,7 @@ func whoIsInfo(domain string) map[string]string {
 	return info
 }
 
-func titleMetaInfo(domain string) (string, error) {
-
-	body := GetPageBody(domain)
-
+func titleMetaInfo(body string) (string, error) {
 	re := regexp.MustCompile("(?:<title.*?>)(.*)(?:</title>)")
 	title := re.FindAllStringSubmatch(body, -1)
 
@@ -127,8 +129,7 @@ func titleMetaInfo(domain string) (string, error) {
  Works 8/10 times as some pages like amazon.com) block their access to
  crawlers
 */
-func logoMetaInfo(domain string) (string, error) {
-	body := GetPageBody(domain)
+func logoMetaInfo(body string, domain string) (string, error) {
 	doc, _ := html.Parse(strings.NewReader(body))
 	var link string
 
@@ -177,5 +178,5 @@ func logoMetaInfo(domain string) (string, error) {
 		return "", errors.New("No image found")
 	}
 
-	return fmt.Sprintf("/%s/favicon.ico", domain), nil
+	return fmt.Sprintf("/static/%s/favicon.ico", domain), nil
 }

@@ -22,7 +22,6 @@ func Routes() *chi.Mux {
 func GetSite(w http.ResponseWriter, r *http.Request) {
 	domain := chi.URLParam(r, "domain")
 	site, err := models.FetchSite(domain)
-
 	if err == sql.ErrNoRows {
 		site = utils.GetWebsiteData(domain)
 		site.CreatedAt = time.Now()
@@ -39,7 +38,6 @@ func GetSite(w http.ResponseWriter, r *http.Request) {
 				log.Println(err)
 			}
 		}
-
 	} else if err != nil {
 		log.Println(err)
 	} else {
@@ -50,6 +48,11 @@ func GetSite(w http.ResponseWriter, r *http.Request) {
 		for _, s := range servers {
 			site.Servers = append(site.Servers, s)
 		}
+	}
+
+	if site.Logo != "" {
+		// TODO: Automate host URI to static content
+		site.Logo = r.Host + site.Logo
 	}
 	render.JSON(w, r, site)
 }

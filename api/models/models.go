@@ -30,12 +30,15 @@ type Server struct {
 
 func FetchSite(domain string) (Site, error) {
 	query := `
-		SELECT domain, title, ssl_grade, previous_ssl_grade, logo, is_down
+		SELECT domain, title, ssl_grade, previous_ssl_grade, created_at, 
+		       updated_at, logo, is_down
 		FROM site 
 		WHERE domain = $1
 	`
 	site := Site{}
-	if err := Db.QueryRow(query, domain).Scan(&site.Domain, &site.Title, &site.Grade, &site.PreviousGrade, &site.Logo, &site.IsDown); err != nil {
+	if err := Db.QueryRow(query, domain).Scan(&site.Domain, &site.Title,
+		&site.Grade, &site.PreviousGrade, &site.CreatedAt, &site.UpdatedAt,
+		&site.Logo, &site.IsDown); err != nil {
 		return Site{}, err
 	}
 

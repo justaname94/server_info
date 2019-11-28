@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 )
@@ -30,16 +29,16 @@ func isGradeGreater(gradeA string, gradeB string) bool {
 	return grades[gradeA] > grades[gradeB]
 }
 
-func GetPageBody(domain string) string {
+func GetPageBody(domain string) (string, error) {
 	response, err := http.Get(fmt.Sprintf("https://%s", domain))
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 	defer response.Body.Close()
 
 	// Get the response body as a string
 	data, err := ioutil.ReadAll(response.Body)
-	return string(data)
+	return string(data), nil
 }
 
 func DownloadImage(filepath string, url string) error {
