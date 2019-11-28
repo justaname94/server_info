@@ -7,10 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 )
-
-var baseDir, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 
 func isGradeGreater(gradeA string, gradeB string) bool {
 	grades := map[string]int{

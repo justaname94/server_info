@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -15,6 +17,8 @@ import (
 
 	"golang.org/x/net/html"
 )
+
+var baseDir, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 
 // Represent the server info result from the SSLabs API
 type ServersInfo struct {
