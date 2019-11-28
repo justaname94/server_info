@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"time"
 
 	"../models"
 	"../utils"
@@ -23,10 +24,17 @@ func GetSite(w http.ResponseWriter, r *http.Request) {
 	site, err := models.FetchSite(domain)
 
 	if err == sql.ErrNoRows {
-		utils.APIInfo(domain)
+		site = utils.GetWebsiteData(domain)
+		site.CreatedAt = time.Now()
+		site.UpdatedAt = time.Now()
+		_, err := models.InsertSite(site)
+
+		if err != nil {
+			log.Println(err)
+		}
 
 	} else if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	render.JSON(w, r, site)
 }

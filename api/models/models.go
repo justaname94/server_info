@@ -2,32 +2,30 @@ package models
 
 import (
 	"database/sql"
-	"log"
 	"time"
 )
 
 var Db *sql.DB
 
 type Site struct {
-	Domain           string    `json:"domain"`
-	Title            string    `json:"title"`
-	CreatedAt        time.Time `json:"createdAt"`
-	UpdatedAt        time.Time `json:"updateddAt"`
-	SSLGrade         string    `json:"sslGrade"`
-	PreviousSSLGrade string    `json:"previousSSLGrade"`
-	Logo             string    `json:"logo"`
-	IsDown           bool      `json:"isDown"`
-	ServersChanged   bool      `json:"serversChanged"`
+	Domain         string    `json:"domain"`
+	Title          string    `json:"title"`
+	CreatedAt      time.Time `json:"createdAt"`
+	UpdatedAt      time.Time `json:"updateddAt"`
+	Grade          string    `json:"grade"`
+	PreviousGrade  string    `json:"previousGrade"`
+	Logo           string    `json:"logo"`
+	IsDown         bool      `json:"isDown"`
+	ServersChanged bool      `json:"serversChanged"`
+
+	Servers []Server `json:"servers"`
 }
 
 type Server struct {
-	Address      string    `json:"address"`
-	CreatedAt    time.Time `json:"createdAt"`
-	UpdatedAt    time.Time `json:"updateddAt"`
-	SSLGrade     string    `json:"sslGrade"`
-	Country      string    `json:"country"`
-	Owner        string    `json:"owner"`
-	Organization string    `json:"organization"`
+	Address string `json:"address"`
+	Grade   string `json:"sslGrade"`
+	Country string `json:"country"`
+	Owner   string `json:"owner"`
 }
 
 func FetchSite(domain string) (Site, error) {
@@ -37,24 +35,26 @@ func FetchSite(domain string) (Site, error) {
 		WHERE domain = $1
 	`
 	site := Site{}
-	if err := Db.QueryRow(query, domain).Scan(&site.Domain, &site.Title, &site.SSLGrade, &site.PreviousSSLGrade, &site.Logo, &site.IsDown); err != nil {
+	if err := Db.QueryRow(query, domain).Scan(&site.Domain, &site.Title, &site.Grade, &site.PreviousGrade, &site.Logo, &site.IsDown); err != nil {
 		return Site{}, err
 	}
 
 	return site, nil
 }
 
-func InsertSite(domain string) Site {
+func InsertSite(site Site) (Site, error) {
 	query := `
-		INSERT INTO site(domain, title, ssl_grade, previous_ssl_grade, logo, is_down)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO site(domain, title, ssl_grade, previous_ssl_grade, 
+		                 created_at, updated_at, logo, is_down)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
-	site := Site{}
-	_, err := Db.Exec(query, site.Domain, site.Title, site.SSLGrade, site.PreviousSSLGrade, site.Logo, site.IsDown)
+	_, err := Db.Exec(query, site.Domain, site.Title, site.Grade,
+		site.PreviousGrade, site.CreatedAt, site.UpdatedAt,
+		site.Logo, site.IsDown)
 
 	if err != nil {
-		log.Fatal(err)
+		return Site{}, err
 	}
 
-	return site
+	return site, nil
 }
