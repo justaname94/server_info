@@ -18,5 +18,5 @@ CREATE TABLE IF NOT EXISTS website.server (
   ssl_grade STRING,
   country STRING,
   owner STRING,
-  site string NOT NULL REFERENCES website.site(domain)
+  domain string NOT NULL REFERENCES website.site(domain)
 )

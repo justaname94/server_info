@@ -33,8 +33,23 @@ func GetSite(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 		}
 
+		for _, server := range site.Servers {
+			_, err := models.InsertServer(server, site.Domain)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+
 	} else if err != nil {
 		log.Println(err)
+	} else {
+		servers, err := models.FetchServers(domain)
+		if err != nil {
+			log.Println(err)
+		}
+		for _, s := range servers {
+			site.Servers = append(site.Servers, s)
+		}
 	}
 	render.JSON(w, r, site)
 }

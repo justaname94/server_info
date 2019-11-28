@@ -58,3 +58,43 @@ func InsertSite(site Site) (Site, error) {
 
 	return site, nil
 }
+
+func FetchServers(domain string) ([]Server, error) {
+	servers := []Server{}
+	query := `
+		SELECT address, ssl_grade, country, owner
+		FROM server
+		WHERE domain = $1
+	`
+	rows, err := Db.Query(query, domain)
+	if err != nil {
+		return []Server{}, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var s Server
+		err := rows.Scan(&s.Address, &s.Grade, &s.Country, &s.Owner)
+		if err != nil {
+			return []Server{}, err
+		}
+		servers = append(servers, s)
+	}
+
+	return servers, nil
+}
+
+func InsertServer(server Server, domain string) (Server, error) {
+	query := `
+		INSERT INTO server(address, ssl_grade, country, owner, domain)
+		VALUES ($1, $2, $3, $4, $5)
+	`
+	_, err := Db.Exec(query, server.Address, server.Grade, server.Country,
+		server.Owner, domain)
+
+	if err != nil {
+		return Server{}, err
+	}
+
+	return server, nil
+}

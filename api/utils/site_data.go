@@ -32,7 +32,7 @@ func GetWebsiteData(domain string) models.Site {
 	servers, _ := aPIInfo(domain)
 	whois := whoIsInfo(domain)
 	title, _ := titleMetaInfo(domain)
-	logo := logoMetaInfo(domain)
+	logo, logoErr := logoMetaInfo(domain)
 	var lowestGrade string
 
 	site := models.Site{
@@ -56,12 +56,11 @@ func GetWebsiteData(domain string) models.Site {
 			lowestGrade = v.Grade
 		}
 	}
-
 	site.Grade = lowestGrade
-
-	if logo != nil {
-		site.Logo = "favicon"
+	if logoErr != nil {
+		site.Logo = "no logo available"
 	}
+	site.Logo = logo
 
 	return site
 }
@@ -128,7 +127,7 @@ func titleMetaInfo(domain string) (string, error) {
  Works 8/10 times as some pages like amazon.com) block their access to
  crawlers
 */
-func logoMetaInfo(domain string) error {
+func logoMetaInfo(domain string) (string, error) {
 	body := GetPageBody(domain)
 	doc, _ := html.Parse(strings.NewReader(body))
 	var link string
@@ -158,7 +157,7 @@ func logoMetaInfo(domain string) error {
 	}
 	f(doc)
 
-	logoPath := fmt.Sprintf("%s%s%s", baseDir, "/static/", domain)
+	logoPath := filepath.Join(baseDir, "static", domain)
 	if link != "" {
 		// Fetch image location depending if its a relative path or not
 		if link[0] == '/' {
@@ -166,17 +165,17 @@ func logoMetaInfo(domain string) error {
 			fmt.Println(faviconPath)
 			err := DownloadImage(logoPath, faviconPath)
 			if err != nil {
-				return err
+				return "", err
 			}
 		} else {
 			err := DownloadImage(logoPath, link)
 			if err != nil {
-				return err
+				return "", err
 			}
 		}
 	} else {
-		return errors.New("No image found")
+		return "", errors.New("No image found")
 	}
 
-	return nil
+	return fmt.Sprintf("/%s/favicon.ico", domain), nil
 }

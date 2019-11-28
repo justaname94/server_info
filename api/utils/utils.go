@@ -55,7 +55,7 @@ func DownloadImage(filepath string, url string) error {
 	defer resp.Body.Close()
 
 	// Create the file
-	out, err := os.Create(fmt.Sprintf("%s/%s", filepath, "/favicon.ico"))
+	out, err := os.Create(fmt.Sprintf("%s/%s", filepath, "favicon.ico"))
 	if err != nil {
 		return err
 	}
