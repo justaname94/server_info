@@ -19,3 +19,6 @@ main
 
 # VSCode local workspace configuration
 .vscode/
+
+# Static files
+static/

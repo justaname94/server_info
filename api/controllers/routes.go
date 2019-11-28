@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -24,8 +23,7 @@ func GetSite(w http.ResponseWriter, r *http.Request) {
 	site, err := models.FetchSite(domain)
 
 	if err == sql.ErrNoRows {
-		servers, _ := utils.APIInfo(domain)
-		fmt.Println(servers)
+		utils.APIInfo(domain)
 
 	} else if err != nil {
 		log.Fatal(err)

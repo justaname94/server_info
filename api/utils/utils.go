@@ -2,15 +2,23 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
+
+	"golang.org/x/net/html"
 )
+
+var baseDir, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 
 // Represent the server info result from the SSLabs API
 type ServersInfo struct {
@@ -43,10 +51,11 @@ func APIInfo(domain string) (ServersInfo, error) {
 	}
 
 	fmt.Println(WhoIsInfo(domain))
-	fmt.Println(MetaInfo(domain))
+	fmt.Println(TitleMetaInfo(domain))
+	fmt.Println(LogoMetaInfo(domain))
 
 	for _, v := range servers.Endpoints {
-		fmt.Println(v)
+		fmt.Printf("Ip Address: %s | Grade: %s\n", v.IPAddress, v.Grade)
 	}
 	return servers, nil
 }
@@ -71,16 +80,9 @@ func WhoIsInfo(domain string) map[string]string {
 	return info
 }
 
-func MetaInfo(domain string) string {
-	response, err := http.Get(fmt.Sprintf("https://%s", domain))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer response.Body.Close()
+func TitleMetaInfo(domain string) string {
 
-	// Get the response body as a string
-	data, err := ioutil.ReadAll(response.Body)
-	body := string(data)
+	body := getPageBody(domain)
 
 	re := regexp.MustCompile("(?:<title.*?>)(.*)(?:</title>)")
 	title := re.FindAllStringSubmatch(body, -1)
@@ -90,4 +92,97 @@ func MetaInfo(domain string) string {
 	}
 
 	return title[0][1]
+}
+
+/*
+ Works 8/10 times as some pages like amazon.com) block their access to
+ crawlers
+*/
+func LogoMetaInfo(domain string) error {
+	body := getPageBody(domain)
+	doc, _ := html.Parse(strings.NewReader(body))
+	var link string
+
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "link" {
+			for _, l := range n.Attr {
+
+				if l.Key == "rel" {
+					if strings.Contains(l.Val, "icon") {
+						// Have to loop again the attr slice as the href key is not always
+						// on the same position
+						for _, l := range n.Attr {
+							if l.Key == "href" {
+								link = l.Val
+							}
+						}
+						return
+					}
+				}
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
+		}
+	}
+	f(doc)
+
+	logoPath := fmt.Sprintf("%s%s%s", baseDir, "/static/", domain)
+	if link != "" {
+		// Fetch image location depending if its a relative path or not
+		if link[0] == '/' {
+			faviconPath := fmt.Sprintf("https://%s%s", domain, link)
+			fmt.Println(faviconPath)
+			err := downloadImage(logoPath, faviconPath)
+			if err != nil {
+				return err
+			}
+		} else {
+			err := downloadImage(logoPath, link)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		return errors.New("No image found")
+	}
+
+	return nil
+}
+
+func getPageBody(domain string) string {
+	response, err := http.Get(fmt.Sprintf("https://%s", domain))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer response.Body.Close()
+
+	// Get the response body as a string
+	data, err := ioutil.ReadAll(response.Body)
+	return string(data)
+}
+
+func downloadImage(filepath string, url string) error {
+	// Create the path
+	fmt.Println(filepath)
+	os.MkdirAll(filepath, os.ModePerm)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Create the file
+	out, err := os.Create(fmt.Sprintf("%s/%s", filepath, "/favicon.ico"))
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	// Write the body to file
+	_, err = io.Copy(out, resp.Body)
+	return err
 }
