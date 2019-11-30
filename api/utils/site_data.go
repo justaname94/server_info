@@ -30,21 +30,38 @@ type ServersInfo struct {
 
 func GetWebsiteData(domain string) models.Site {
 	site := models.Site{}
+	servers := map[string]models.Server{}
 	body, err := GetPageBody(domain)
 	if err != nil {
 		site.IsDown = true
 		return site
 	}
-	servers, _ := aPIInfo(domain)
-	whois := whoIsInfo(domain)
 	title, _ := titleMetaInfo(body)
 	logo, logoErr := logoMetaInfo(body, domain)
-	var lowestGrade string
 
 	site.Title = title
 	site.Domain = domain
+	servers, site.Grade = getServerData(domain)
 
-	for i, v := range servers.Endpoints {
+	for _, s := range servers {
+		site.Servers = append(site.Servers, s)
+	}
+
+	// site.Grade = lowestGrade
+	if logoErr != nil {
+		site.Logo = ""
+	}
+	site.Logo = logo
+
+	return site
+}
+
+func getServerData(domain string) (map[string]models.Server, string) {
+	endpoints, _ := aPIInfo(domain)
+	whois := whoIsInfo(domain)
+	servers := map[string]models.Server{}
+	var lowestGrade string
+	for i, v := range endpoints.Endpoints {
 		server := models.Server{
 			Address: v.IPAddress,
 			Grade:   v.Grade,
@@ -52,7 +69,7 @@ func GetWebsiteData(domain string) models.Site {
 			Owner:   whois["owner"],
 		}
 
-		site.Servers = append(site.Servers, server)
+		servers[server.Address] = server
 		if i > 1 {
 			if isGradeGreater(lowestGrade, v.Grade) {
 				lowestGrade = v.Grade
@@ -61,13 +78,24 @@ func GetWebsiteData(domain string) models.Site {
 			lowestGrade = v.Grade
 		}
 	}
-	site.Grade = lowestGrade
-	if logoErr != nil {
-		site.Logo = ""
-	}
-	site.Logo = logo
+	return servers, lowestGrade
+}
 
-	return site
+func HasServersUpdated(domain string, servers []models.Server) bool {
+	newServers, _ := getServerData(domain)
+
+	if len(newServers) != len(servers) {
+		return true
+	}
+
+	for _, s := range servers {
+		_, present := newServers[s.Address]
+		if !present {
+			return true
+		}
+	}
+
+	return false
 }
 
 func aPIInfo(domain string) (ServersInfo, error) {

@@ -13,6 +13,8 @@ import (
 	"github.com/go-chi/render"
 )
 
+const HoursToCheckUpdate = 5
+
 func Routes() *chi.Mux {
 	router := chi.NewRouter()
 	router.Get("/{domain}", GetSite)
@@ -32,24 +34,55 @@ func GetSite(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 		}
 
-		for _, server := range site.Servers {
-			_, err := models.InsertServer(server, site.Domain)
+		_, err = models.InsertServer(site.Domain, site.Servers...)
+		if err != nil {
+			log.Println(err)
+		}
+
+	} else if err != nil {
+		log.Println(err)
+	} else {
+		timeDiff := time.Since(site.UpdatedAt)
+		if err != nil {
+			log.Println(err)
+		}
+		servers, _ := models.FetchServers(domain)
+		var updated bool
+		// For some reason the time.Since(last_update) always gives a minimun of
+		// four hour difference, so HoursToCheckUpdate is set to five at the
+		// moment to represent one hour difference.
+		// TODO: Fix time difference issue
+		if timeDiff.Hours() > HoursToCheckUpdate {
+			updated = utils.HasServersUpdated(domain, servers)
+		}
+
+		if updated {
+			updatedSite := utils.GetWebsiteData(domain)
+			updatedSite.ServersChanged = true
+			updatedSite.PreviousGrade = site.Grade
+			updatedSite.CreatedAt = site.CreatedAt
+			updatedSite.UpdatedAt = time.Now()
+
+			// Delete and add new the servers
+			for _, s := range site.Servers {
+				models.DeleteServer(s.Address)
+			}
+			models.InsertServer(domain, updatedSite.Servers...)
+
+			err = models.PartialUpdateSite(domain, updatedSite, site.Grade)
+			if err != nil {
+				log.Println(err)
+			}
+			site = updatedSite
+		} else {
+			site.Servers = servers
+			site.ServersChanged = false
+			models.PartialUpdateSite(domain, site, "")
 			if err != nil {
 				log.Println(err)
 			}
 		}
-	} else if err != nil {
-		log.Println(err)
-	} else {
-		servers, err := models.FetchServers(domain)
-		if err != nil {
-			log.Println(err)
-		}
-		for _, s := range servers {
-			site.Servers = append(site.Servers, s)
-		}
 	}
-
 	if site.Logo != "" {
 		// TODO: Automate host URI to static content
 		site.Logo = r.Host + site.Logo

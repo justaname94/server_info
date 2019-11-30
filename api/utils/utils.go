@@ -46,6 +46,13 @@ func DownloadImage(filepath string, url string) error {
 	fmt.Println(filepath)
 	os.MkdirAll(filepath, os.ModePerm)
 
+	savePath := fmt.Sprintf("%s/%s", filepath, "favicon.ico")
+
+	// If image has already been downloaded, do nothing
+	if _, err := os.Stat("/path/to/whatever"); !os.IsNotExist(err) {
+		return nil
+	}
+
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err)
@@ -54,7 +61,7 @@ func DownloadImage(filepath string, url string) error {
 	defer resp.Body.Close()
 
 	// Create the file
-	out, err := os.Create(fmt.Sprintf("%s/%s", filepath, "favicon.ico"))
+	out, err := os.Create(savePath)
 	if err != nil {
 		return err
 	}

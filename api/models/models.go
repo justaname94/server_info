@@ -30,7 +30,7 @@ type Server struct {
 
 func FetchSite(domain string) (Site, error) {
 	query := `
-		SELECT domain, title, ssl_grade, previous_ssl_grade, created_at, 
+		SELECT domain, title, ssl_grade, previous_ssl_Grade, created_at, 
 		       updated_at, logo, is_down
 		FROM site 
 		WHERE domain = $1
@@ -87,17 +87,56 @@ func FetchServers(domain string) ([]Server, error) {
 	return servers, nil
 }
 
-func InsertServer(server Server, domain string) (Server, error) {
+func InsertServer(domain string, server ...Server) ([]Server, error) {
 	query := `
 		INSERT INTO server(address, ssl_grade, country, owner, domain)
 		VALUES ($1, $2, $3, $4, $5)
 	`
-	_, err := Db.Exec(query, server.Address, server.Grade, server.Country,
-		server.Owner, domain)
 
-	if err != nil {
-		return Server{}, err
+	for _, s := range server {
+		_, err := Db.Exec(query, s.Address, s.Grade, s.Country,
+			s.Owner, domain)
+
+		if err != nil {
+			return []Server{}, err
+		}
 	}
 
 	return server, nil
+}
+
+func DeleteServer(ipAddress string) error {
+	query := `
+		DELETE FROM server WHERE ipAddress = $1
+	`
+	_, err := Db.Exec(query, ipAddress)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Only change data that is expected to change over time on the test
+func PartialUpdateSite(domain string, site Site, previousSslGrade string) error {
+	var err error
+	if previousSslGrade == "" {
+		query := `
+		UPDATE site SET (ssl_grade, previous_ssl_grade, servers_changed, updated_at)  
+		= ($1, $2, $3, $4) WHERE domain = $5
+	`
+		_, err = Db.Exec(query, site.Grade, previousSslGrade, site.ServersChanged,
+			site.UpdatedAt, domain)
+	} else {
+		query := `
+		UPDATE site SET (ssl_grade, servers_changed, updated_at)  
+		= ($1, $2, $3, $4) WHERE domain = $5
+	`
+		_, err = Db.Exec(query, site.Grade, site.ServersChanged,
+			site.UpdatedAt, domain)
+	}
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
