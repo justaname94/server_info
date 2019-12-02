@@ -48,12 +48,12 @@ func FetchSite(domain string) (Site, error) {
 func InsertSite(site Site) (Site, error) {
 	query := `
 		INSERT INTO site(domain, title, ssl_grade, previous_ssl_grade, 
-		                 created_at, updated_at, logo, is_down)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		                 created_at, updated_at, logo, is_down, servers_changed)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 	_, err := Db.Exec(query, site.Domain, site.Title, site.Grade,
 		site.PreviousGrade, site.CreatedAt, site.UpdatedAt,
-		site.Logo, site.IsDown)
+		site.Logo, site.IsDown, site.ServersChanged)
 
 	if err != nil {
 		return Site{}, err
@@ -139,4 +139,34 @@ func PartialUpdateSite(domain string, site Site, previousSslGrade string) error 
 		return err
 	}
 	return nil
+}
+
+func RetrieveLatestSites() (map[string][]Site, error) {
+	siteMap := map[string][]Site{}
+	siteMap["items"] = []Site{}
+	query := `
+		SELECT domain, title, ssl_grade, previous_ssl_grade, logo, is_down, 
+		servers_changed, created_at, updated_at
+		FROM site
+		ORDER BY updated_at
+		LIMIT 15
+	`
+	rows, err := Db.Query(query)
+	if err != nil {
+		return map[string][]Site{}, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var s Site
+		err := rows.Scan(&s.Domain, &s.Title, &s.Grade, &s.PreviousGrade, &s.Logo,
+			&s.IsDown, &s.ServersChanged, &s.CreatedAt, &s.UpdatedAt)
+		s.Servers, _ = FetchServers(s.Domain)
+		if err != nil {
+			return map[string][]Site{}, err
+		}
+		siteMap["items"] = append(siteMap["items"], s)
+	}
+
+	return siteMap, nil
 }

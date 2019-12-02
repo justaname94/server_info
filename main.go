@@ -31,7 +31,7 @@ func Routes() *chi.Mux {
 	)
 
 	router.Route("/", func(r chi.Router) {
-		r.Mount("/servers", controllers.Routes())
+		r.Mount("/", controllers.Routes())
 	})
 
 	return router

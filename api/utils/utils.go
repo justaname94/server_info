@@ -10,6 +10,7 @@ import (
 
 func isGradeGreater(gradeA string, gradeB string) bool {
 	grades := map[string]int{
+		"":   15,
 		"A+": 1,
 		"A":  2,
 		"B+": 3,

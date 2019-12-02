@@ -17,8 +17,19 @@ const HoursToCheckUpdate = 5
 
 func Routes() *chi.Mux {
 	router := chi.NewRouter()
+	router.Get("/history", GetSiteHistory)
 	router.Get("/{domain}", GetSite)
 	return router
+}
+
+func GetSiteHistory(w http.ResponseWriter, r *http.Request) {
+	siteMap, err := models.RetrieveLatestSites()
+	if err != nil {
+		log.Println(err)
+		render.JSON(w, r, "")
+	} else {
+		render.JSON(w, r, siteMap)
+	}
 }
 
 func GetSite(w http.ResponseWriter, r *http.Request) {
@@ -57,23 +68,12 @@ func GetSite(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if updated {
-			updatedSite := utils.GetWebsiteData(domain)
-			updatedSite.ServersChanged = true
-			updatedSite.PreviousGrade = site.Grade
-			updatedSite.CreatedAt = site.CreatedAt
-			updatedSite.UpdatedAt = time.Now()
-
-			// Delete and add new the servers
-			for _, s := range site.Servers {
-				models.DeleteServer(s.Address)
-			}
-			models.InsertServer(domain, updatedSite.Servers...)
-
-			err = models.PartialUpdateSite(domain, updatedSite, site.Grade)
+			updatedSite, err := performServerUpdate(site)
 			if err != nil {
 				log.Println(err)
+			} else {
+				site = updatedSite
 			}
-			site = updatedSite
 		} else {
 			site.Servers = servers
 			site.ServersChanged = false
@@ -88,4 +88,24 @@ func GetSite(w http.ResponseWriter, r *http.Request) {
 		site.Logo = r.Host + site.Logo
 	}
 	render.JSON(w, r, site)
+}
+
+func performServerUpdate(site models.Site) (models.Site, error) {
+	updatedSite := utils.GetWebsiteData(site.Domain)
+	updatedSite.ServersChanged = true
+	updatedSite.PreviousGrade = site.Grade
+	updatedSite.CreatedAt = site.CreatedAt
+	updatedSite.UpdatedAt = time.Now()
+
+	// Delete and add new the servers
+	for _, s := range site.Servers {
+		models.DeleteServer(s.Address)
+	}
+	models.InsertServer(site.Domain, updatedSite.Servers...)
+
+	err := models.PartialUpdateSite(site.Domain, updatedSite, site.Grade)
+	if err != nil {
+		return models.Site{}, err
+	}
+	return updatedSite, nil
 }
