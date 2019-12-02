@@ -141,9 +141,8 @@ func PartialUpdateSite(domain string, site Site, previousSslGrade string) error 
 	return nil
 }
 
-func RetrieveLatestSites() (map[string][]Site, error) {
-	siteMap := map[string][]Site{}
-	siteMap["items"] = []Site{}
+func RetrieveLatestSites() ([]Site, error) {
+	siteMap := []Site{}
 	query := `
 		SELECT domain, title, ssl_grade, previous_ssl_grade, logo, is_down, 
 		servers_changed, created_at, updated_at
@@ -153,7 +152,7 @@ func RetrieveLatestSites() (map[string][]Site, error) {
 	`
 	rows, err := Db.Query(query)
 	if err != nil {
-		return map[string][]Site{}, err
+		return []Site{}, err
 	}
 	defer rows.Close()
 
@@ -163,9 +162,9 @@ func RetrieveLatestSites() (map[string][]Site, error) {
 			&s.IsDown, &s.ServersChanged, &s.CreatedAt, &s.UpdatedAt)
 		s.Servers, _ = FetchServers(s.Domain)
 		if err != nil {
-			return map[string][]Site{}, err
+			return []Site{}, err
 		}
-		siteMap["items"] = append(siteMap["items"], s)
+		siteMap = append(siteMap, s)
 	}
 
 	return siteMap, nil
