@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/cors"
 	"github.com/go-chi/render"
 )
 
@@ -22,12 +23,19 @@ const (
 
 func Routes() *chi.Mux {
 	router := chi.NewRouter()
+
+	cors := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "POST"},
+	})
+
 	router.Use(
 		render.SetContentType(render.ContentTypeJSON),
 		middleware.Logger,
 		middleware.DefaultCompress,
 		middleware.RedirectSlashes,
 		middleware.Recoverer,
+		cors.Handler,
 	)
 
 	router.Route("/", func(r chi.Router) {

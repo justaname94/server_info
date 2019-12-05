@@ -18,7 +18,7 @@ const HoursToCheckUpdate = 5
 func Routes() *chi.Mux {
 	router := chi.NewRouter()
 	router.Get("/history", GetSiteHistory)
-	router.Get("/{domain}", GetSite)
+	router.Get("/sites/{domain}", GetSite)
 	return router
 }
 
@@ -82,10 +82,6 @@ func GetSite(w http.ResponseWriter, r *http.Request) {
 				log.Println(err)
 			}
 		}
-	}
-	if site.Logo != "" {
-		// TODO: Automate host URI to static content
-		site.Logo = r.Host + site.Logo
 	}
 	render.JSON(w, r, site)
 }

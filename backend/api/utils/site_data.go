@@ -22,6 +22,7 @@ var baseDir, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 
 // Represent the server info result from the SSLabs API
 type ServersInfo struct {
+	Status    string `json:"status"`
 	Endpoints []struct {
 		IPAddress string `json:"ipAddress"`
 		Grade     string `json:"grade"`
@@ -58,10 +59,10 @@ func GetWebsiteData(domain string) models.Site {
 
 func getServerData(domain string) (map[string]models.Server, string) {
 	endpoints, _ := aPIInfo(domain)
-	whois := whoIsInfo(domain)
 	servers := map[string]models.Server{}
 	var lowestGrade string
 	for i, v := range endpoints.Endpoints {
+		whois := whoIsInfo(v.IPAddress)
 		server := models.Server{
 			Address: v.IPAddress,
 			Grade:   v.Grade,
@@ -122,19 +123,19 @@ func aPIInfo(domain string) (ServersInfo, error) {
 	return servers, nil
 }
 
-func whoIsInfo(domain string) map[string]string {
+func whoIsInfo(address string) map[string]string {
 
 	info := make(map[string]string)
 
-	command := fmt.Sprintf("whois %s | grep \"Admin Organization\\|Admin Country\" ", domain)
+	command := fmt.Sprintf("whois %s | grep \"Organization\\|Country\" ", address)
 	output, err := exec.Command("bash", "-c", command).Output()
 	if err != nil {
 		log.Fatal(err)
 	}
 	outputList := strings.Split(string(output), "\n")
 
-	organization := outputList[0][20:]
-	country := outputList[1][15:]
+	organization := outputList[0][16:]
+	country := outputList[1][16:]
 
 	info["owner"] = organization
 	info["country"] = country

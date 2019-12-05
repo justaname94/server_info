@@ -129,7 +129,7 @@ func PartialUpdateSite(domain string, site Site, previousSslGrade string) error 
 	} else {
 		query := `
 		UPDATE site SET (ssl_grade, servers_changed, updated_at)  
-		= ($1, $2, $3, $4) WHERE domain = $5
+		= ($1, $2, $3) WHERE domain = $4
 	`
 		_, err = Db.Exec(query, site.Grade, site.ServersChanged,
 			site.UpdatedAt, domain)
