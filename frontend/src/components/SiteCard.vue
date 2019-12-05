@@ -1,29 +1,29 @@
 <template>
-  <div class="cards">
-    <b-card
-      header="xataka.com"
-      title="Xataka - Tecnología y gadgets, móviles, informática, electrónica"
-    >
+  <div class="card-wrapper">
+    <b-card :header="website.domain" :title="website.title">
       <b-list-group>
         <b-list-group-item>
           <strong>Grade:</strong>
-          <b-badge>A</b-badge>
+          <b-badge>{{ website.grade }}</b-badge>
         </b-list-group-item>
-        <b-list-group-item>
+        <b-list-group-item v-if="website.previousGrade">
           <strong>Previous grade:</strong>
-          <b-badge>B</b-badge>
+          <b-badge>{{ website.previousGrade }}</b-badge>
         </b-list-group-item>
         <b-list-group-item>
           <strong>Logo:</strong>
           <img height="36px" width="36px" src="../assets/logo.png" alt />
         </b-list-group-item>
-        <b-list-group-item>Is not down</b-list-group-item>
+        <b-list-group-item>
+          <span v-if="website.isDown">Is Down</span>
+          <span v-else>Is not down</span>
+        </b-list-group-item>
         <b-list-group-item>Have not changed lately</b-list-group-item>
       </b-list-group>
       <hr />
       <h4>Servers</h4>
       <div>
-        <b-table striped :items="items"></b-table>
+        <b-table striped :items="website.servers"></b-table>
       </div>
     </b-card>
   </div>
@@ -31,38 +31,17 @@
 
 <script>
 export default {
-  data() {
-    return {
-      items: [
-        {
-          address: "13.35.125.83",
-          grade: "A",
-          country: "US",
-          owner: "Amazon Technologies Inc. (AT-88-Z)"
-        },
-        {
-          address: "13.35.125.87",
-          grade: "A",
-          country: "US",
-          owner: "Amazon Technologies Inc. (AT-88-Z)"
-        },
-        {
-          address: "13.35.125.4",
-          grade: "A",
-          country: "US",
-          owner: "Amazon Technologies Inc. (AT-88-Z)"
-        },
-        {
-          address: "13.35.125.72",
-          grade: "A",
-          country: "US",
-          owner: "Amazon Technologies Inc. (AT-88-Z)"
-        }
-      ]
-    };
+  props: {
+    website: {
+      type: Object,
+      required: true
+    }
   }
 };
 </script>
 
 <style scoped>
+.card-wrapper {
+  margin-top: 10px;
+}
 </style>
