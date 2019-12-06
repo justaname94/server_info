@@ -1,5 +1,5 @@
 <template>
-  <b-card :header="website.domain" :title="website.title" class="mt-2">
+  <b-card :header="website.domain" :title="website.title" class="mt-4">
     <b-list-group>
       <b-list-group-item>
         <strong>Grade:</strong>

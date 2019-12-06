@@ -150,7 +150,7 @@ func RetrieveLatestSites() ([]Site, error) {
 		SELECT domain, title, ssl_grade, previous_ssl_grade, logo, is_down, 
 		servers_changed, created_at, updated_at
 		FROM site
-		ORDER BY updated_at
+		ORDER BY updated_at DESC
 		LIMIT 15
 	`
 	rows, err := Db.Query(query)

@@ -2,17 +2,30 @@
   <div>
     <h2 class="text-center">Search Website's information</h2>
     <b-form @submit.prevent="getSiteInfo">
-      <b-form-input v-model="url" :disabled="loading" placeholder="Ex: google.com"></b-form-input>
+      <b-form-input
+        v-model="url"
+        :disabled="loading"
+        placeholder="Ex: google.com"
+        required
+      ></b-form-input>
       <br />
       <div class="text-center">
         <b-button size="lg" type="submit" variant="primary">Search</b-button>
+        <b-button size="lg" variant="primary" @click="navigateToHistory">
+          History
+        </b-button>
       </div>
     </b-form>
-    <app-site-card v-if="Object.keys(website).length > 0" :website="website"></app-site-card>
-    <div v-if="loading" class="text-center mt-3">
-      <b-spinner label="Loading..."></b-spinner>
-      <p>Please wait while we get the data, this could take a while...</p>
+    <div class="text-center mt-3">
+      <div v-if="loading">
+        <b-spinner label="Loading..." class="mt-3"></b-spinner>
+        <p>Please wait while we get the data, this could take a while...</p>
+      </div>
     </div>
+    <app-site-card
+      v-if="Object.keys(website).length > 0"
+      :website="website"
+    ></app-site-card>
   </div>
 </template>
 
@@ -50,6 +63,9 @@ export default {
             this.website = data;
           }
         });
+    },
+    navigateToHistory() {
+      this.$router.push({ name: "history" });
     }
   }
 };
