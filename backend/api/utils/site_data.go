@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -20,6 +18,10 @@ import (
 
 var baseDir, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 
+const InProgressMsg = "IN_PROGRESS"
+const DNSMsg = "DNS"
+const ReadyMsg = "READY"
+
 // Represent the server info result from the SSLabs API
 type ServersInfo struct {
 	Status    string `json:"status"`
@@ -29,20 +31,41 @@ type ServersInfo struct {
 	} `json:"endpoints"`
 }
 
-func GetWebsiteData(domain string) models.Site {
+type WhoisData struct {
+	WhoisRecord struct {
+		RegistryData struct {
+			Registrant struct {
+				Country      string `json:"country"`
+				Organization string `json:"organization"`
+			} `json:"registrant`
+		} `json:"registryData"`
+	} `json:"WhoisRecord`
+}
+
+func GetWebsiteData(domain string) (models.Site, string) {
 	site := models.Site{}
-	servers := map[string]models.Server{}
 	body, err := GetPageBody(domain)
 	if err != nil {
 		site.IsDown = true
-		return site
+		return site, ""
 	}
+	servers, metadata := getServerData(domain)
+
+	/*
+	 A DNS response msg on a working domain its just sometimes the first
+	 response of the API before the in_progress msg, but they seem to mean
+	 the same
+	*/
+	if metadata["status"] != ReadyMsg {
+		return models.Site{}, InProgressMsg
+	}
+
+	site.Grade = metadata["lowestGrade"]
 	title, _ := titleMetaInfo(body)
 	logo, logoErr := logoMetaInfo(body, domain)
 
 	site.Title = title
 	site.Domain = domain
-	servers, site.Grade = getServerData(domain)
 
 	for _, s := range servers {
 		site.Servers = append(site.Servers, s)
@@ -54,20 +77,27 @@ func GetWebsiteData(domain string) models.Site {
 	}
 	site.Logo = logo
 
-	return site
+	return site, "READY"
 }
 
-func getServerData(domain string) (map[string]models.Server, string) {
-	endpoints, _ := aPIInfo(domain)
+func getServerData(domain string) (map[string]models.Server, map[string]string) {
 	servers := map[string]models.Server{}
+	metadata := map[string]string{}
+	endpoints, _ := apiInfo(domain)
+	metadata["status"] = endpoints.Status
+	if endpoints.Status != ReadyMsg {
+		return servers, metadata
+	}
+
 	var lowestGrade string
+
 	for i, v := range endpoints.Endpoints {
-		whois := whoIsInfo(v.IPAddress)
+		whois, _ := whoisInfo(v.IPAddress)
 		server := models.Server{
 			Address: v.IPAddress,
 			Grade:   v.Grade,
-			Country: whois["country"],
-			Owner:   whois["owner"],
+			Country: whois.WhoisRecord.RegistryData.Registrant.Country,
+			Owner:   whois.WhoisRecord.RegistryData.Registrant.Organization,
 		}
 
 		servers[server.Address] = server
@@ -79,7 +109,8 @@ func getServerData(domain string) (map[string]models.Server, string) {
 			lowestGrade = v.Grade
 		}
 	}
-	return servers, lowestGrade
+	metadata["lowestGrade"] = lowestGrade
+	return servers, metadata
 }
 
 func HasServersUpdated(domain string, servers []models.Server) bool {
@@ -99,7 +130,8 @@ func HasServersUpdated(domain string, servers []models.Server) bool {
 	return false
 }
 
-func aPIInfo(domain string) (ServersInfo, error) {
+// TODO: Refactor apiInfo and whoisInfo
+func apiInfo(domain string) (ServersInfo, error) {
 	url := fmt.Sprint("https://api.ssllabs.com/api/v3/analyze?host=", domain)
 	client := http.Client{
 		Timeout: time.Second * 2,
@@ -123,24 +155,28 @@ func aPIInfo(domain string) (ServersInfo, error) {
 	return servers, nil
 }
 
-func whoIsInfo(address string) map[string]string {
-
-	info := make(map[string]string)
-
-	command := fmt.Sprintf("whois %s | grep \"Organization\\|Country\" ", address)
-	output, err := exec.Command("bash", "-c", command).Output()
-	if err != nil {
-		log.Fatal(err)
+func whoisInfo(address string) (WhoisData, error) {
+	url := fmt.Sprintf("https://www.whoisxmlapi.com/whoisserver/WhoisService?apiKey=at_jUM8u6lTS16Q6TJFJnxwiYw6H2W9l&domainName=%s&outputFormat=json", address)
+	client := http.Client{
+		Timeout: time.Second * 2,
 	}
-	outputList := strings.Split(string(output), "\n")
 
-	organization := outputList[0][16:]
-	country := outputList[1][16:]
+	whois := WhoisData{}
 
-	info["owner"] = organization
-	info["country"] = country
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return WhoisData{}, err
+	}
 
-	return info
+	res, err := client.Do(req)
+	if err != nil {
+		return WhoisData{}, err
+	}
+	if err := json.NewDecoder(res.Body).Decode(&whois); err != nil {
+		return WhoisData{}, err
+	}
+
+	return whois, nil
 }
 
 func titleMetaInfo(body string) (string, error) {
@@ -154,10 +190,8 @@ func titleMetaInfo(body string) (string, error) {
 	return title[0][1], nil
 }
 
-/*
- Works 8/10 times as some pages like amazon.com) block their access to
- crawlers
-*/
+//  Works 8/10 times as some pages like amazon.com) block their access to
+//  crawlers
 func logoMetaInfo(body string, domain string) (string, error) {
 	doc, _ := html.Parse(strings.NewReader(body))
 	var link string
@@ -192,7 +226,6 @@ func logoMetaInfo(body string, domain string) (string, error) {
 		// Fetch image location depending if its a relative path or not
 		if link[0] == '/' {
 			faviconPath := fmt.Sprintf("https://%s%s", domain, link)
-			fmt.Println(faviconPath)
 			err := DownloadImage(logoPath, faviconPath)
 			if err != nil {
 				return "", err

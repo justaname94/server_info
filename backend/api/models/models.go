@@ -46,6 +46,8 @@ func FetchSite(domain string) (Site, error) {
 }
 
 func InsertSite(site Site) (Site, error) {
+	site.CreatedAt = time.Now()
+	site.UpdatedAt = time.Now()
 	query := `
 		INSERT INTO site(domain, title, ssl_grade, previous_ssl_grade, 
 		                 created_at, updated_at, logo, is_down, servers_changed)
@@ -117,22 +119,23 @@ func DeleteServer(ipAddress string) error {
 }
 
 // Only change data that is expected to change over time on the test
-func PartialUpdateSite(domain string, site Site, previousSslGrade string) error {
+func PartialUpdateSite(site Site, previousSslGrade string) error {
 	var err error
+	currTime := time.Now()
 	if previousSslGrade == "" {
 		query := `
-		UPDATE site SET (ssl_grade, previous_ssl_grade, servers_changed, updated_at)  
+		UPDATE site SET (ssl_grade, previous_ssl_grade, servers_changed)  
 		= ($1, $2, $3, $4) WHERE domain = $5
 	`
 		_, err = Db.Exec(query, site.Grade, previousSslGrade, site.ServersChanged,
-			site.UpdatedAt, domain)
+			site.Domain)
 	} else {
 		query := `
 		UPDATE site SET (ssl_grade, servers_changed, updated_at)  
 		= ($1, $2, $3) WHERE domain = $4
 	`
 		_, err = Db.Exec(query, site.Grade, site.ServersChanged,
-			site.UpdatedAt, domain)
+			currTime, site.Domain)
 	}
 
 	if err != nil {

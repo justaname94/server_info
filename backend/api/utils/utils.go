@@ -44,7 +44,6 @@ func GetPageBody(domain string) (string, error) {
 
 func DownloadImage(filepath string, url string) error {
 	// Create the path
-	fmt.Println(filepath)
 	os.MkdirAll(filepath, os.ModePerm)
 
 	savePath := fmt.Sprintf("%s/%s", filepath, "favicon.ico")
@@ -56,7 +55,6 @@ func DownloadImage(filepath string, url string) error {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 	defer resp.Body.Close()
