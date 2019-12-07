@@ -107,9 +107,9 @@ func InsertServer(domain string, server ...Server) ([]Server, error) {
 	return server, nil
 }
 
-func DeleteServer(ipAddress string) error {
+func DeleteAllServers(ipAddress string) error {
 	query := `
-		DELETE FROM server WHERE ipAddress = $1
+		DELETE FROM server WHERE domain = $1
 	`
 	_, err := Db.Exec(query, ipAddress)
 	if err != nil {

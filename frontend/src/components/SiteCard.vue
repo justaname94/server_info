@@ -11,13 +11,22 @@
       </b-list-group-item>
       <b-list-group-item>
         <strong>Logo:</strong>
-        <img height="36px" width="36px" v-if="!website.isDown" :src="logo" alt />
+        <img
+          height="36px"
+          width="36px"
+          v-if="!website.isDown"
+          :src="logo"
+          alt
+        />
       </b-list-group-item>
       <b-list-group-item>
         <span v-if="website.isDown">Is Down</span>
         <span v-else>Is not down</span>
       </b-list-group-item>
-      <b-list-group-item>Have not changed lately</b-list-group-item>
+      <b-list-group-item v-if="website.serversChanged"
+        >Changed in at least the past hour</b-list-group-item
+      >
+      <b-list-group-item v-else>Have not changed lately</b-list-group-item>
     </b-list-group>
     <hr />
     <h4>Servers</h4>

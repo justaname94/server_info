@@ -73,18 +73,15 @@ func GetSite(w http.ResponseWriter, r *http.Request) {
 
 func performServerUpdate(site models.Site) (models.Site, error) {
 	updatedSite, status := utils.GetWebsiteData(site.Domain)
-
-	if status != utils.InProgressMsg {
+	if status == utils.ReadyMsg {
 		updatedSite.ServersChanged = true
 		updatedSite.PreviousGrade = site.Grade
 
 		// Delete and add new the servers
-		for _, s := range site.Servers {
-			models.DeleteServer(s.Address)
-		}
+		models.DeleteAllServers(site.Domain)
 		models.InsertServer(site.Domain, updatedSite.Servers...)
 
-		err := models.PartialUpdateSite(updatedSite, site.Domain)
+		err := models.PartialUpdateSite(updatedSite, site.Grade)
 		if err != nil {
 			return models.Site{}, err
 		}
@@ -97,7 +94,6 @@ func checkForUpdate(site models.Site) (models.Site, error) {
 	updatedSite := site
 
 	updated := utils.HasServersUpdated(site.Domain, site.Servers)
-
 	if updated {
 		var err error
 		updatedSite, err = performServerUpdate(site)
