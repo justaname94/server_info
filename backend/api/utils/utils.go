@@ -57,6 +57,11 @@ func DownloadImage(filepath string, url string) error {
 	if err != nil {
 		return err
 	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("status: %d", http.StatusNotFound)
+	}
+
 	defer resp.Body.Close()
 
 	// Create the file

@@ -32,28 +32,30 @@ func Routes() *chi.Mux {
 }
 
 func GetSiteHistory(w http.ResponseWriter, r *http.Request) {
-	if siteMap, err := models.RetrieveLatestSites(); err != nil {
+	siteMap, err := models.RetrieveLatestSites()
+	if err != nil {
 		log.Println(err)
 		render.JSON(w, r, "")
-	} else {
-		render.JSON(w, r, siteMap)
+		return
 	}
+	render.JSON(w, r, siteMap)
 }
 
 func GetSite(w http.ResponseWriter, r *http.Request) {
 	domain := chi.URLParam(r, "domain")
 	site, err := models.FetchSite(domain)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			site, err = retrieveAndSaveSite(domain)
-			if err != nil {
-				render.JSON(w, r, appError{Message: err.Error()})
-				return
-			}
-			render.JSON(w, r, site)
+
+	if err == sql.ErrNoRows {
+		site, err = retrieveAndSaveSite(domain)
+		if err != nil {
+			render.JSON(w, r, appError{Message: err.Error()})
 			return
 		}
+		render.JSON(w, r, site)
+		return
+	}
 
+	if err != nil {
 		render.JSON(w, r, appError{Message: err.Error()})
 		return
 	}
@@ -92,7 +94,6 @@ func performServerUpdate(site models.Site) (models.Site, error) {
 
 func checkForUpdate(site models.Site) (models.Site, error) {
 	updatedSite := site
-
 	updated := utils.HasServersUpdated(site.Domain, site.Servers)
 	if updated {
 		var err error

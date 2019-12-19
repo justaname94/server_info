@@ -248,7 +248,13 @@ func logoMetaInfo(body string, domain string) (string, error) {
 			}
 		}
 	} else {
-		return "", errors.New("No image found")
+		// Some pages have the logo at the relative path {{host}}/favicon.ico, so
+		// if the page is not found, try to look at this path
+		faviconURL := fmt.Sprintf("https://%s/favicon.ico", domain)
+		err := DownloadImage(logoPath, faviconURL)
+		if err != nil {
+			return "", errors.New("No image found")
+		}
 	}
 
 	return fmt.Sprintf("/static/%s/favicon.ico", domain), nil
