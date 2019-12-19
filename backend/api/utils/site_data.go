@@ -18,11 +18,22 @@ import (
 
 var baseDir, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 
-const InProgressMsg = "IN_PROGRESS"
-const DNSMsg = "DNS"
-const ReadyMsg = "READY"
+const (
+	// InProgressMsg means the site analysis is not completed
+	InProgressMsg = "IN_PROGRESS"
+	// DNSMsg means that either is still resolving the name or its an invalid URL
+	DNSMsg = "DNS"
+	// ReadyMsg means that all the checks have been completed
+	ReadyMsg = "READY"
+)
 
-// Represent the server info result from the SSLabs API
+const (
+	whoIsURL = "https://www.whoisxmlapi.com/whoisserver/WhoisService?" +
+		"apiKey=at_jUM8u6lTS16Q6TJFJnxwiYw6H2W9l&domainName=%s&outputFormat=json"
+	apiInfoURL = "https://api.ssllabs.com/api/v3/analyze?host="
+)
+
+// ServersInfo Represent the server info result from the SSLabs API
 type ServersInfo struct {
 	Status    string `json:"status"`
 	Endpoints []struct {
@@ -31,15 +42,15 @@ type ServersInfo struct {
 	} `json:"endpoints"`
 }
 
-type WhoisData struct {
+type whoisData struct {
 	WhoisRecord struct {
 		RegistryData struct {
 			Registrant struct {
 				Country      string `json:"country"`
 				Organization string `json:"organization"`
-			} `json:"registrant`
+			} `json:"registrant"`
 		} `json:"registryData"`
-	} `json:"WhoisRecord`
+	} `json:"WhoisRecord"`
 }
 
 func GetWebsiteData(domain string) (models.Site, string) {
@@ -53,8 +64,8 @@ func GetWebsiteData(domain string) (models.Site, string) {
 
 	/*
 	 A DNS response msg on a working domain its just sometimes the first
-	 response of the API before the in_progress msg, but they seem to mean
-	 the same
+	 response of the API before the InProgressMsg as is still resolving the ip
+	 addresses, but afterwards it just gives the InProgressMsg
 	*/
 	if metadata["status"] != ReadyMsg {
 		return models.Site{}, InProgressMsg
@@ -77,7 +88,7 @@ func GetWebsiteData(domain string) (models.Site, string) {
 	}
 	site.Logo = logo
 
-	return site, "READY"
+	return site, ReadyMsg
 }
 
 func getServerData(domain string) (map[string]models.Server, map[string]string) {
@@ -132,7 +143,7 @@ func HasServersUpdated(domain string, servers []models.Server) bool {
 
 // TODO: Refactor apiInfo and whoisInfo
 func apiInfo(domain string) (ServersInfo, error) {
-	url := fmt.Sprint("https://api.ssllabs.com/api/v3/analyze?host=", domain)
+	url := fmt.Sprint(apiInfoURL, domain)
 	client := http.Client{
 		Timeout: time.Second * 2,
 	}
@@ -155,25 +166,25 @@ func apiInfo(domain string) (ServersInfo, error) {
 	return servers, nil
 }
 
-func whoisInfo(address string) (WhoisData, error) {
-	url := fmt.Sprintf("https://www.whoisxmlapi.com/whoisserver/WhoisService?apiKey=at_jUM8u6lTS16Q6TJFJnxwiYw6H2W9l&domainName=%s&outputFormat=json", address)
+func whoisInfo(address string) (whoisData, error) {
+	url := fmt.Sprintf(whoIsURL, address)
 	client := http.Client{
 		Timeout: time.Second * 2,
 	}
 
-	whois := WhoisData{}
+	whois := whoisData{}
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return WhoisData{}, err
+		return whoisData{}, err
 	}
 
 	res, err := client.Do(req)
 	if err != nil {
-		return WhoisData{}, err
+		return whoisData{}, err
 	}
 	if err := json.NewDecoder(res.Body).Decode(&whois); err != nil {
-		return WhoisData{}, err
+		return whoisData{}, err
 	}
 
 	return whois, nil
@@ -191,7 +202,7 @@ func titleMetaInfo(body string) (string, error) {
 }
 
 //  Works 8/10 times as some pages like amazon.com) block their access to
-//  crawlers
+//  crawlers or save their favicon in non-conventional ways
 func logoMetaInfo(body string, domain string) (string, error) {
 	doc, _ := html.Parse(strings.NewReader(body))
 	var link string

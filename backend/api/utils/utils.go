@@ -49,7 +49,7 @@ func DownloadImage(filepath string, url string) error {
 	savePath := fmt.Sprintf("%s/%s", filepath, "favicon.ico")
 
 	// If image has already been downloaded, do nothing
-	if _, err := os.Stat("/path/to/whatever"); !os.IsNotExist(err) {
+	if _, err := os.Stat(savePath); !os.IsNotExist(err) {
 		return nil
 	}
 
