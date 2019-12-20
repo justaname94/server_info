@@ -11,9 +11,9 @@
       <br />
       <div class="text-center">
         <b-button size="lg" type="submit" variant="primary">Search</b-button>
-        <b-button size="lg" variant="primary" @click="navigateToHistory">
-          History
-        </b-button>
+        <b-button size="lg" variant="secondary" @click="navigateToHistory"
+          >History</b-button
+        >
       </div>
     </b-form>
     <div class="text-center mt-3">
@@ -26,6 +26,18 @@
       v-if="Object.keys(website).length > 0"
       :website="website"
     ></app-site-card>
+
+    <b-modal ref="info-modal" hide-footer title="Request took too long">
+      <div class="d-block text-center">
+        <p>
+          We have not been able to complete your request, please check back
+          again in a few minutes
+        </p>
+      </div>
+      <b-button class="mt-2" variant="outline-info" block @click="toggleModal"
+        >Ok</b-button
+      >
+    </b-modal>
   </div>
 </template>
 
@@ -44,9 +56,15 @@ export default {
     };
   },
   methods: {
-    getSiteInfo(evt) {
-      this.website = {};
-      this.loading = true;
+    sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    },
+    toggleModal() {
+      // We pass the ID of the button that we want to return focus to
+      // when the modal has hidden
+      this.$refs["info-modal"].toggle("#toggle-btn");
+    },
+    loadInfo() {
       this.$http
         .get(`sites/${this.url}`)
         .then(response => {
@@ -54,15 +72,29 @@ export default {
         })
         .then(data => {
           if (data.message !== undefined && data.message === "IN_PROGRESS") {
-            // Recursively retry the request until is ready
-            setTimeout(() => {
-              this.getSiteInfo(evt);
-            }, 3000);
-          } else {
-            this.loading = false;
-            this.website = data;
+            return;
           }
+          this.loading = false;
+          this.website = data;
         });
+    },
+    async getSiteInfo() {
+      const tries = 6;
+      const second = 1000;
+      this.website = {};
+      this.loading = true;
+
+      for (let i = 0; i < tries; i++) {
+        await this.loadInfo();
+        if (!this.loading) {
+          break;
+        }
+        await this.sleep(second << i);
+      }
+      if (this.loading) {
+        this.loading = false;
+        this.toggleModal();
+      }
     },
     navigateToHistory() {
       this.$router.push({ name: "history" });

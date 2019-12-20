@@ -5,7 +5,7 @@
       <b-button size="lg" variant="primary" @click="getHistory"
         >History</b-button
       >
-      <b-button size="lg" variant="primary" @click="navigateToHome">
+      <b-button size="lg" variant="secondary" @click="navigateToHome">
         Search
       </b-button>
       <div>
